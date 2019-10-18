@@ -1,0 +1,154 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+1. Descargar el archivo
+
+```{r}
+rm(list=ls())
+desafio <- read.csv("caudal_extra.csv")
+```
+
+2. Análisis exploratorio de los datos
+
+```{r}
+class(desafio)
+glimpse(desafio)
+summary(desafio)
+levels(desafio$codigo_estacion)
+levels(desafio$nombre)
+summary(desafio$nombre)
+summary(is.na(desafio$precip_promedio))
+summary(is.na(desafio$temp_max_promedio))
+```
+Corresponden a mediciones de 133 estaciones de monitoreo ubicadas en distintas partes del país y con distintos caudales. Algunos ríos tienen más de un punto de monitoreo a lo largo de su trayectoria.
+Con respecto a los datos faltantes NAs, estos se encuentran en las variables de precipitaciones y temperatura únicamente y podrían estar asociados a problemas en la medición. Corresponden al 2% de los datos de precipitaciones y al 12% en mediciones de temperatura.
+
+```{r}
+plot(desafio$caudal,desafio$latitud)
+hist(desafio$altura)
+hist(desafio$precip_promedio)
+hist(desafio$caudal)
+plot(desafio$caudal,desafio$precip_promedio)
+hist(desafio$temp_max_promedio)
+```
+La mayoría de los cursos de agua se encuentran a alturas menores de 1000 msnm, y la mayoría de éstos a nivel cercano a nivel del mar. 
+Con respecto a la relación caudal y precipitaciones se podría pensar que la mayoría de los ríos son alimentados principalmente por deshielos y en menor proporción por precipitaciones.
+
+3a. Plots de precipitación, temperatura y caudal
+
+```{r}
+#preparación de los datos
+#desafio$fecha <- as.Date(desafio$fecha,format= "%d/%m/%Y")
+library(ggplot2)
+library(dplyr)
+
+ggplot(data=desafio)+aes(x=desafio$fecha, y=desafio$caudal)+ geom_line(color="blue")
+
+
+#análisis para una estación: 
+a<-desafio%>%filter(codigo_estacion==4540001)
+a$fecha <- format(as.Date(a$fecha), "%d/%m/%Y")
+ggplot(data=a)+aes(x=a$fecha, y=a$caudal)+ geom_line(color="blue")
+View(a)
+class(a$caudal)
+
+time_plot_una_estacion<-function(X)
+a<-desafio%>%filter(codigo_estacion==X)
+ggplot(data=a)+aes(x=a$fecha, y=a$precip_promedio)+ geom_line(color="blue")
+
+
+```
+
+
+3b. Plots de precipitación, temperatura y caudal
+
+```{r}
+ggplot(data=desafio)+aes(x=desafio$fecha, y=desafio$caudal)+ geom_line(aes(y=desafio$caudal, color="blue"))+geom_line(aes(y=desafio$precip_promedio, color="orange"))+geom_line(aes(y=desafio$temp_max_promedio, color="green"))
+
+```
+
+
+
+
+4. Crea tres variables llamadas
+● caudal_extremo
+● temp_extremo
+● precip_extremo
+
+
+```{r}
+desafio$mes <- format(as.Date(desafio$fecha), "%m")
+desafio$mes<-as.numeric(desafio$mes)
+View(desafio)
+
+temporada<-function(x){
+  if (x>6 & x<=9) {print ("invierno")}
+  if (x>3 & x<=6) {print ("otoño")}
+  if (x>9 & x<=12) {print ("primavera")}
+  if (x<=3) {print ("verano")}}
+
+c<-desafio%>% filter(codigo_estacion==1020003)
+for (i in 1:12194) {c$estacion[i]=as.factor(temporada(as.numeric(na.omit(c$mes[i]))))}
+View(c)
+
+
+
+
+
+```
+
+Series de Tiempo
+
+```{r}
+#series de tiempo
+
+#para una estación: 1020003
+
+c<-desafio%>%group_by(codigo_estacion=1020003)
+ts <- ts(na.omit(c$temp_max_promedio), start=c(1960,1), end=c(2019), frequency=10)
+plot(ts)
+ts_comp<- decompose(ts)
+plot(ts_comp)
+
+#estudio tendencias de la serie
+library(trend)
+#test de aleatoriedad bartels.test
+bartels.test(ts)
+
+#test de cambio de punto Buishand Range
+br_test <- br.test(ts, m = 20000)
+plot(br_test)
+br_test
+
+# test de cox stuart para estacionalidad
+cs.test(ts) 
+
+#condiciones extremas
+
+c<-desafio%>%group_by(codigo_estacion=1020003)
+
+
+
+
+ P09_caudal<-quantile(V$caudal,0.9)
+  V<-desafio%>%group_by(codigo_estacion=1020003)%>%group_by(estacion=verano)
+if(desafio$caudal[i]>P09_caudal) {desafio$caudal_extremo[i]=1}
+#if() {desafio$temp_extremo=1}
+#if() {desafio$precip_extremo=1}
+
+
+}
+
+
+O<-desafio%>%group_by(codigo_estacion=estacion)%>%group_by(estacion=otoño)
+
+P<-desafio%>%group_by(codigo_estacion=estacion)%>%group_by(estacion=primavera)
+
+I<-desafio%>%group_by(codigo_estacion=estacion)%>%group_by(estacion=invierno)
+
+
+
+```
+
